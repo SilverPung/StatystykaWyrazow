@@ -42,6 +42,9 @@ public class MainFrame {
     private final List<Future<?>> producerFutures;
     private final long interval = 15;
 
+    /**
+     * Główna metoda uruchamiająca aplikację.
+     */
     public static void main(String[] args) {
         setLookAndFeel();
         EventQueue.invokeLater(() -> {
@@ -56,6 +59,9 @@ public class MainFrame {
         });
     }
 
+    /**
+     * Konstruktor klasy MainFrame. Inicjalizuje flagę stopu, liczbę producentów i konsumentów oraz executor.
+     */
     public MainFrame() {
         stopFlag = new AtomicBoolean(false);
         producerCount = 1;
@@ -65,6 +71,9 @@ public class MainFrame {
         initialize();
     }
 
+    /**
+     * Ustawia wygląd i styl aplikacji na systemowy.
+     */
     private static void setLookAndFeel() {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -73,6 +82,9 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Inicjalizuje główne okno aplikacji oraz dodaje obsługę zamykania okna.
+     */
     private void initialize() {
         frame = new JFrame();
         frame.addWindowListener(new WindowAdapter() {
@@ -89,6 +101,10 @@ public class MainFrame {
         addButtons(panel);
     }
 
+    /**
+     * Dodaje przyciski do panelu sterowania.
+     * @param panel Panel, do którego dodawane są przyciski.
+     */
     private void addButtons(JPanel panel) {
         JButton btnStart = new JButton("Start");
         btnStart.addActionListener(e -> startMultiThreadedStatistics());
@@ -102,6 +118,9 @@ public class MainFrame {
         panel.add(btnClose);
     }
 
+    /**
+     * Rozpoczyna wielowątkowe przetwarzanie statystyk.
+     */
     private void startMultiThreadedStatistics() {
         if (isAnyProducerRunning()) {
             JOptionPane.showMessageDialog(frame, "Cannot start a new task! At least one producer is still running!", "Warning", JOptionPane.WARNING_MESSAGE);
@@ -109,6 +128,7 @@ public class MainFrame {
         }
         stopFlag.set(false);
         producerFutures.clear();
+
         BlockingQueue<Optional<Path>> queue = new LinkedBlockingQueue<>(consumerCount);
 
         for (int i = 0; i < producerCount; i++) {
@@ -121,6 +141,10 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Sprawdza, czy którykolwiek z producentów jest wciąż uruchomiony.
+     * @return true, jeśli przynajmniej jeden producent działa, w przeciwnym razie false.
+     */
     private boolean isAnyProducerRunning() {
         for (Future<?> future : producerFutures) {
             if (!future.isDone()) {
@@ -130,6 +154,11 @@ public class MainFrame {
         return false;
     }
 
+    /**
+     * Tworzy zadanie producenta, które przetwarza pliki i dodaje je do kolejki.
+     * @param queue Kolejka, do której dodawane są pliki.
+     * @return Runnable reprezentujący zadanie producenta.
+     */
     private Runnable createProducer(BlockingQueue<Optional<Path>> queue) {
         return () -> {
             String threadName = Thread.currentThread().getName();
@@ -148,6 +177,10 @@ public class MainFrame {
         };
     }
 
+    /**
+     * Dodaje "trucizny" do kolejki, aby zakończyć pracę konsumentów.
+     * @param queue Kolejka, do której dodawane są "trucizny".
+     */
     private void addPoisonPills(BlockingQueue<Optional<Path>> queue) {
         for (int i = 0; i < consumerCount; i++) {
             try {
@@ -158,6 +191,10 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Przetwarza pliki w katalogu i dodaje je do kolejki.
+     * @param queue Kolejka, do której dodawane są pliki.
+     */
     private void processFiles(BlockingQueue<Optional<Path>> queue) {
         try {
             Files.walkFileTree(Paths.get(DIR_PATH), new SimpleFileVisitor<>() {
@@ -179,6 +216,10 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Uśpienie wątku na określony czas.
+     * @param threadName Nazwa wątku, który jest uśpiony.
+     */
     private void sleepInterval(String threadName) {
         System.out.printf("Producer %s will check directories again in %d seconds%n", threadName, interval);
         try {
@@ -191,6 +232,11 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Tworzy zadanie konsumenta, które przetwarza pliki z kolejki.
+     * @param queue Kolejka, z której pobierane są pliki.
+     * @return Runnable reprezentujący zadanie konsumenta.
+     */
     private Runnable createConsumer(BlockingQueue<Optional<Path>> queue) {
         return () -> {
             String threadName = Thread.currentThread().getName();
@@ -214,6 +260,11 @@ public class MainFrame {
         };
     }
 
+    /**
+     * Zlicza wystąpienia słów w pliku i zwraca 10 najczęściej występujących słów.
+     * @param path Ścieżka do pliku.
+     * @return Mapa z 10 najczęściej występującymi słowami i ich liczbą wystąpień.
+     */
     private Map<String, Long> getLinkedCountedWords(Path path) {
         try (BufferedReader reader = Files.newBufferedReader(path)) {
             return reader.lines()
@@ -231,6 +282,9 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Zatrzymuje wszystkie zadania producentów i konsumentów.
+     */
     private void stopAllTasks() {
         stopFlag.set(true);
         for (Future<?> future : producerFutures) {
@@ -238,6 +292,9 @@ public class MainFrame {
         }
     }
 
+    /**
+     * Zamyka aplikację i zwalnia zasoby.
+     */
     private void closeApplication() {
         executor.shutdownNow();
         frame.dispose();
